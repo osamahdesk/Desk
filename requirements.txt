@@ -1,0 +1,6 @@
+# requirements.txt
+fastapi
+uvicorn
+gunicorn
+g4f
+pydantic
