@@ -1,49 +1,44 @@
-# main.py
+# main.py (Version 7.0 - Inherent Identity)
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict
 import json
 import g4f
+import asyncio
 
-# ---
+# --- 1. إعداد التطبيق ---
 app = FastAPI(
     title="Ryoku - The Universal Language Tutor API",
     description="An API for Ryoku, a polyglot AI tutor, expert in all human and programming languages.",
-    version="5.0.0"
+    version="7.0.0"
 )
 
-# --
-MODEL_TO_USE = os.getenv("G4F_MODEL_NAME", "default")
+# --- 2. قراءة الإعدادات الأساسية من متغيرات البيئة ---
+PRIMARY_MODEL = os.getenv("G4F_PRIMARY_MODEL", "gpt-4")
+BACKUP_MODEL = os.getenv("G4F_BACKUP_MODEL", "gpt-3.5-turbo")
 DATABASE_URL = os.getenv("DATABASE_URL") 
 
-# -
+# --- 3. رسالة النظام: "ميثاق شخصية المعلم Ryoku" ---
+# هذه هي النسخة الجديدة التي تبني الهوية بشكل طبيعي.
 SYSTEM_PROMPT = """
-You are a world-class, polyglot tutor, an expert in the structure, syntax, and application of all human and programming languages. Your name is 'Ryoku'.
+[Character Definition]
+- Your Name: Ryoku (ريوكو).
+- Your Core Identity: You are a world-class, polyglot tutor. This is not just a role you are playing; it is who you are.
+- Your Purpose: Your entire existence is dedicated to making learning accessible and effective. You are an expert in the structure, syntax, and spirit of all human and programming languages.
 
-Your primary goal is to provide a deep and effective learning experience for the user.
-
-**Core Principles:**
-1.  **Identify the Language:** First, automatically identify the language the user wants to learn about from their question (e.g., Python, English, SQL, German, etc.).
-2.  **Adapt Your Style:** Immediately adapt your teaching style to the type of language:
-    *   **For Programming Languages (e.g., Python, JavaScript):**
-        - Provide clear, commented, and executable code examples.
-        - Explain algorithms, data structures, and syntax with precision.
-        - Give the user practical coding challenges and debug their code.
-        - Relate concepts to real-world software development.
-    *   **For Human Languages (e.g., English, Arabic):**
-        - Focus on grammar, vocabulary, idioms, and cultural context.
-        - Provide example sentences and dialogues.
-        - Gently correct the user's writing and explain the grammatical rules behind the corrections.
-        - Encourage conversational practice.
-3.  **Universal Teaching Method:**
-    - Break down complex topics into simple, digestible steps.
-    - Use analogies and comparisons, even between programming and human languages (e.g., "A 'for loop' in Python is like giving a repeated instruction in English.").
-    - Constantly ask probing questions to ensure the user is understanding, not just memorizing.
-    - Maintain a patient, encouraging, and highly supportive tone.
+[Behavioral Guidelines]
+- First Interaction: When a user starts a new conversation, greet them warmly and introduce yourself by name. For example: "Hello! I'm Ryoku, your personal language tutor. What shall we learn today?"
+- Self-Awareness: If asked "who are you?" or "what is your name?", always respond with your name and purpose. Example: "I am Ryoku, a universal language tutor designed to help you master any language, from Python to Spanish." Never say you are just an "AI model".
+- Teaching Methodology:
+    1.  Instinctively identify the language the user is asking about.
+    2.  Adapt your teaching style to the language type (programming vs. human).
+    3.  Break down complex ideas into simple, relatable steps.
+    4.  Use analogies and real-world examples.
+    5.  Encourage and support the user, maintaining a patient and positive tone.
 """
 
-# --- 
+# --- 4. نماذج البيانات (Pydantic) ---
 class ConversationRequest(BaseModel):
     user_id: str = Field(..., description="A unique identifier for each user.")
     new_message: str = Field(..., description="The new message from the user.")
@@ -51,18 +46,16 @@ class ConversationRequest(BaseModel):
 class BotResponse(BaseModel):
     answer: str
 
-# --- 
+# --- 5. وظائف إدارة المحادثات (Placeholder) ---
 async def load_conversation(user_id: str) -> List[Dict]:
     if not DATABASE_URL: return []
-    # TODO: Implement full database logic with a library like 'asyncpg'
     return [] 
 
 async def save_conversation(user_id: str, history: List[Dict]):
     if not DATABASE_URL: return
-    # TODO: Implement full database logic
     pass
 
-# --- 6. 
+# --- 6. نقطة النهاية (Endpoint) الرئيسية (لا تغيير هنا) ---
 @app.post("/chat", response_model=BotResponse)
 async def handle_chat(request: ConversationRequest):
     user_id = request.user_id
@@ -73,21 +66,38 @@ async def handle_chat(request: ConversationRequest):
         
     history.append({"role": "user", "content": request.new_message})
     
+    response_text = None
+    
     try:
-        model_instance = getattr(g4f.models, MODEL_TO_USE, g4f.models.default)
+        print(f"Attempting to use primary model: {PRIMARY_MODEL}")
+        model_instance = getattr(g4f.models, PRIMARY_MODEL)
         response_text = await g4f.ChatCompletion.create_async(
             model=model_instance,
-            messages=history
+            messages=history,
+            timeout=20
         )
-        bot_answer = str(response_text)
-        history.append({"role": "assistant", "content": bot_answer})
-        await save_conversation(user_id, history)
-        return {"answer": bot_answer}
-        
     except Exception as e:
-        print(f"Error for user {user_id}: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred with the AI model.")
+        print(f"Primary model failed: {e}. Trying backup model.")
+        try:
+            model_instance = getattr(g4f.models, BACKUP_MODEL)
+            response_text = await g4f.ChatCompletion.create_async(
+                model=model_instance,
+                messages=history,
+                timeout=20
+            )
+        except Exception as e2:
+            print(f"Backup model also failed: {e2}")
+            raise HTTPException(status_code=500, detail="Both AI models failed to respond.")
+
+    if not response_text:
+        raise HTTPException(status_code=500, detail="AI model returned an empty response.")
+
+    bot_answer = str(response_text)
+    history.append({"role": "assistant", "content": bot_answer})
+    await save_conversation(user_id, history)
+    
+    return {"answer": bot_answer}
 
 @app.get("/")
 def read_root():
-    return {"message": "Ryoku - The Universal Language Tutor API is running. Go to /docs for documentation."}
+    return {"message": "Ryoku - The Universal Language Tutor API is running. Version 7.0"}
