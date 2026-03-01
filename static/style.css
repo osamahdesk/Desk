@@ -1,1 +1,240 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap');
+
+:root {
+    --bg-color: #0d1117;
+    --border-color: #30363d;
+    --text-color: #c9d1d9;
+    --text-secondary: #8b949e;
+    --accent-color: #58a6ff;
+    --header-bg: #161b22;
+    --terminal-header: #2c313a;
+    --red-dot: #ff5f57;
+    --yellow-dot: #febc2e;
+    --green-dot: #28c840;
+    --code-bg: #161b22;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: 'Roboto', sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: var(--header-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+header {
+    background-color: var(--terminal-header);
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.terminal-bar {
+    display: flex;
+    align-items: center;
+}
+
+.dots {
+    display: flex;
+}
+
+.dot {
+    height: 12px;
+    width: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+.dot.red { background-color: var(--red-dot); }
+.dot.yellow { background-color: var(--yellow-dot); }
+.dot.green { background-color: var(--green-dot); }
+
+.title {
+    color: var(--text-secondary);
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+}
+
+main {
+    padding: 25px;
+}
+
+section {
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+}
+section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+h1, h2 {
+    font-family: 'Roboto', sans-serif;
+    font-weight: 700;
+    color: var(--text-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+h1 { font-size: 2.2em; }
+h2 { font-size: 1.8em; }
+
+h1 i, h2 i {
+    color: var(--accent-color);
+    margin-right: 15px;
+}
+
+p {
+    color: var(--text-secondary);
+    font-size: 1.1em;
+}
+
+ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+ul li {
+    background-color: #0d1117;
+    padding: 15px;
+    border-left: 4px solid var(--accent-color);
+    margin-bottom: 10px;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Code Tabs */
+.code-tabs {
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    background-color: #0d1117;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+}
+
+.tab-link {
+    background-color: inherit;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    color: var(--text-secondary);
+    font-family: 'Fira Code', monospace;
+}
+
+.tab-link:hover {
+    background-color: #30363d;
+}
+
+.tab-link.active {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border-bottom: 2px solid var(--accent-color);
+}
+
+.tab-content {
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background-color: var(--code-bg);
+}
+
+pre code {
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+}
+
+/* Live Chat */
+.chat-window {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+}
+.chat-header {
+    background-color: var(--terminal-header);
+    padding: 10px;
+    font-weight: bold;
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+.chat-body {
+    flex-grow: 1;
+    padding: 15px;
+    overflow-y: auto;
+    background-color: #0d1117;
+}
+.message {
+    padding: 8px 12px;
+    border-radius: 18px;
+    margin-bottom: 10px;
+    max-width: 80%;
+    line-height: 1.4;
+}
+.message.bot {
+    background-color: #21262d;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+.message.user {
+    background-color: var(--accent-color);
+    color: #fff;
+    align-self: flex-end;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+.message.bot.error {
+    background-color: #481212;
+    color: #ff9999;
+}
+.chat-footer {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid var(--border-color);
+}
+#chat-input {
+    flex-grow: 1;
+    background-color: #0d1117;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color);
+    padding: 10px;
+    font-family: 'Roboto', sans-serif;
+}
+#send-btn {
+    background-color: var(--accent-color);
+    border: none;
+    color: white;
+    padding: 0 15px;
+    margin-left: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.2em;
+}
+#send-btn:hover {
+    opacity: 0.9;
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-secondary);
+}
+footer a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+footer a:hover {
+    text-decoration: underline;
+}
