@@ -1,1 +1,311 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ryoku API Documentation</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="terminal-bar">
+                <div class="dots">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="title">Ryoku API - Universal Language Tutor</div>
+            </div>
+        </header>
+
+        <main>
+            <section id="intro">
+                <h1><i class="fas fa-brain"></i> Ryoku API</h1>
+                <p>Welcome to the official documentation for the Ryoku API. Ryoku is a world-class, polyglot AI tutor, an expert in all human and programming languages. This API allows you to integrate Ryoku's teaching capabilities into your own applications.</p>
+            </section>
+
+            <section id="capabilities">
+                <h2><i class="fas fa-cogs"></i> Capabilities</h2>
+                <ul>
+                    <li><strong>Polyglot Expertise:</strong> Teaches any programming language (Python, JavaScript, etc.) and any human language (Spanish, Japanese, etc.).</li>
+                    <li><strong>Adaptive Teaching:</strong> Automatically adapts its style for programming concepts versus linguistic nuances.</li>
+                    <li><strong>Context-Aware:</strong> Remembers the conversation history to provide coherent and relevant lessons (feature in development).</li>
+                    <li><strong>Simple Integration:</strong> A straightforward POST endpoint for easy integration.</li>
+                </ul>
+            </section>
+
+            <section id="live-chat">
+                <h2><i class="fas fa-comments"></i> Live Demo</h2>
+                <div class="chat-window">
+                    <div class="chat-header">Live Chat with Ryoku</div>
+                    <div class="chat-body" id="chat-body">
+                        <div class="message bot">Hello! I'm Ryoku. Ask me a question to test the API.</div>
+                    </div>
+                    <div class="chat-footer">
+                        <input type="text" id="chat-input" placeholder="Ask Ryoku a question...">
+                        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="usage">
+                <h2><i class="fas fa-code"></i> API Usage</h2>
+                <p>To use the API, send a <strong>POST</strong> request to the <code>/chat</code> endpoint with a JSON body containing your <code>user_id</code> and <code>new_message</code>.</p>
+                
+                <div class="code-tabs">
+                    <button class="tab-link active" onclick="openLang(event, 'Python')">Python</button>
+                    <button class="tab-link" onclick="openLang(event, 'JavaScript')">JavaScript</button>
+                    <button class="tab-link" onclick="openLang(event, 'Java')">Java</button>
+                    <button class="tab-link" onclick="openLang(event, 'CSharp')">C#</button>
+                    <button class="tab-link" onclick="openLang(event, 'PHP')">PHP</button>
+                </div>
+
+                <div id="Python" class="tab-content">
+<pre><code class="language-python">
+import requests
+import json
+
+API_URL = "https://your-render-url.onrender.com/chat"
+
+def ask_ryoku(message, user_id="demo-user"):
+    payload = {
+        "user_id": user_id,
+        "new_message": message
+    }
+    headers = {"Content-Type": "application/json"}
+    
+    try:
+        response = requests.post(API_URL, data=json.dumps(payload), headers=headers)
+        response.raise_for_status()
+        print(response.json()["answer"])
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+
+ask_ryoku("Explain what a variable is in Python.")
+</code></pre>
+                </div>
+                <div id="JavaScript" class="tab-content" style="display:none">
+<pre><code class="language-javascript">
+const API_URL = "https://your-render-url.onrender.com/chat";
+
+async function askRyoku(message, userId = "demo-user") {
+    const payload = {
+        user_id: userId,
+        new_message: message
+    };
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data.answer);
+    } catch (error) {
+        console.error("Error:", error);
+    }
+}
+
+askRyoku("What is an arrow function in JavaScript?");
+</code></pre>
+                </div>
+                <div id="Java" class="tab-content" style="display:none">
+<pre><code class="language-java">
+// Requires a library like OkHttp or Java 11's HttpClient
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class RyokuClient {
+    public static void main(String[] args) throws Exception {
+        String apiUrl = "https://your-render-url.onrender.com/chat";
+        String jsonPayload = "{\"user_id\": \"demo-user\", \"new_message\": \"What is the main method in Java?\"}";
+
+        HttpClient client = HttpClient.newHttpClient();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(apiUrl))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        System.out.println(response.body());
+    }
+}
+</code></pre>
+                </div>
+                <div id="CSharp" class="tab-content" style="display:none">
+<pre><code class="language-csharp">
+// Requires HttpClient, available in .NET
+using System;
+using System.Net.Http;
+using System.Text;
+using System.Threading.Tasks;
+
+public class RyokuClient
+{
+    static async Task Main(string[] args)
+    {
+        var apiUrl = "https://your-render-url.onrender.com/chat";
+        var client = new HttpClient();
+
+        var payload = new {
+            user_id = "demo-user",
+            new_message = "What is LINQ in C#?"
+        };
+        
+        var jsonPayload = System.Text.Json.JsonSerializer.Serialize(payload);
+        var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+        try {
+            HttpResponseMessage response = await client.PostAsync(apiUrl, content);
+            response.EnsureSuccessStatusCode();
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(responseBody);
+        } catch (HttpRequestException e) {
+            Console.WriteLine($"Error: {e.Message}");
+        }
+    }
+}
+</code></pre>
+                </div>
+                <div id="PHP" class="tab-content" style="display:none">
+<pre><code class="language-php">
+&lt;?php
+$apiUrl = 'https://your-render-url.onrender.com/chat';
+
+function askRyoku($message, $userId = 'demo-user') {
+    global $apiUrl;
+    
+    $payload = json_encode([
+        'user_id' => $userId,
+        'new_message' => $message
+    ]);
+
+    $ch = curl_init($apiUrl);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($payload)
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($httpCode >= 200 && $httpCode < 300) {
+        echo $response;
+    } else {
+        echo "Error: Received status code " . $httpCode;
+    }
+}
+
+askRyoku("What is an associative array in PHP?");
+?&gt;
+</code></pre>
+                </div>
+            </section>
+        </main>
+        <footer>
+            <p>Ryoku API &copy; 2024. Built with FastAPI and <i class="fa-solid fa-heart"></i>.</p>
+            <a href="https://github.com/your-github-username/your-repo-name" target="_blank"><i class="fab fa-github"></i> View on GitHub</a>
+        </footer>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        hljs.highlightAll();
+
+        function openLang(evt, langName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab-link");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(langName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+        document.getElementById("Python").style.display = "block";
+
+        // Live Chat Logic
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const chatBody = document.getElementById('chat-body');
+
+        const handleChat = async () => {
+            const userMessage = chatInput.value.trim();
+            if (!userMessage) return;
+
+            // Add user message to chat
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'message user';
+            userMsgDiv.textContent = userMessage;
+            chatBody.appendChild(userMsgDiv);
+            chatInput.value = '';
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            // Add thinking message
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'message bot thinking';
+            thinkingDiv.innerHTML = '<i>Ryoku is thinking...</i>';
+            chatBody.appendChild(thinkingDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: 'live-demo-user',
+                        new_message: userMessage
+                    })
+                });
+
+                thinkingDiv.remove(); // Remove thinking message
+
+                if (!response.ok) {
+                    throw new Error('API returned an error.');
+                }
+
+                const data = await response.json();
+                const botMsgDiv = document.createElement('div');
+                botMsgDiv.className = 'message bot';
+                botMsgDiv.textContent = data.answer;
+                chatBody.appendChild(botMsgDiv);
+
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'message bot error';
+                errorDiv.textContent = 'Sorry, an error occurred. Please try again.';
+                chatBody.appendChild(errorDiv);
+            } finally {
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        };
+
+        sendBtn.addEventListener('click', handleChat);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleChat();
+            }
+        });
+    </script>
+</body>
+</html>
