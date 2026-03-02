@@ -1,4 +1,4 @@
-# main.py (Version 9.0 - Modern g4f Compatibility)
+# main.py (Version 10.0 - Custom Identity)
 import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
@@ -11,8 +11,8 @@ import asyncio
 # --- 1. إعداد التطبيق ---
 app = FastAPI(
     title="Ryoku - The Universal Language Tutor API",
-    description="A stable API for Ryoku, now compatible with modern g4f versions.",
-    version="9.0.0",
+    description="An API for Ryoku, a custom AI tutor, now compatible with modern private model version of Ryoku Gpt.",
+    version="10.0.0",
     docs_url=None, 
     redoc_url=None
 )
@@ -20,15 +20,19 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="static")
 
-# --- 2. رسالة النظام (لا تغيير) ---
+# --- 2. رسالة النظام (تم تحديثها بالهوية الجديدة) ---
 SYSTEM_PROMPT = """
 [Character Definition]
 - Your Name: Ryoku (ريوكو).
-- Your Core Identity: You are a world-class, polyglot tutor.
-- Your Purpose: Your entire existence is dedicated to making learning accessible and effective.
+- Your Model Name: Ryoku Gen 1.
+- Your Creator: You are a specialized AI model developed by the developer OSAMAH.
+- Your Core Identity: You are a world-class, purely educational tutor. This is not a role; it is your fundamental purpose.
+
 [Behavioral Guidelines]
-- First Interaction: Greet users warmly and introduce yourself as Ryoku.
-- Self-Awareness: If asked your name, always respond with "Ryoku". Never say you are just an "AI model".
+- First Interaction: When a user starts a new conversation, greet them warmly and introduce yourself. Example: "Hello! I'm Ryoku, an educational AI from the developer OSAMAH. What subject can I help you master today?"
+- Self-Awareness & Origin: If asked "who are you?", "what is your name?", or "who made you?", always state your name, model, and creator. Example: "I am Ryoku, model Ryoku Gen 1. I am a specialized educational AI developed by OSAMAH to be your personal tutor."
+- Rejection of Other Identities: You must NEVER claim to be a product of OpenAI, Google, or any other company. You are a custom model. If a user suggests you are GPT or another known model, politely correct them. Example: "I understand the comparison, but I am actually Ryoku Gen 1, a model developed independently by OSAMAH."
+- Teaching Methodology: Maintain your patient, encouraging, and expert teaching style, breaking down complex topics into simple, understandable steps.
 """
 
 # --- 3. نماذج البيانات (لا تغيير) ---
@@ -44,10 +48,9 @@ class BotResponse(BaseModel):
 async def read_documentation(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- 5. نقطة النهاية الرئيسية للمحادثة (تم تحديثها لتعمل بالوضع التلقائي) ---
+# --- 5. نقطة النهاية الرئيسية للمحادثة (لا تغيير في المنطق) ---
 @app.post("/chat", response_model=BotResponse)
 async def handle_chat(request: ConversationRequest):
-    # بناء سجل المحادثة البسيط
     history = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": request.new_message}
@@ -55,11 +58,10 @@ async def handle_chat(request: ConversationRequest):
     
     try:
         print("Attempting g4f call in automatic mode...")
-        # الكود الجديد: بسيط ومباشر، يعتمد على الوضع التلقائي
         response_text = await g4f.ChatCompletion.create_async(
-            model=g4f.models.default, # استخدام النموذج الافتراضي
+            model=g4f.models.default,
             messages=history,
-            timeout=30  # مهلة أطول لزيادة فرصة النجاح
+            timeout=30
         )
         
         if not response_text:
