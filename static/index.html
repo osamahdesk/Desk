@@ -69,7 +69,7 @@
 import requests
 import json
 
-API_URL = "https://your-render-url.onrender.com/chat"
+API_URL = "https://ryoku-tutor-api.onrender.com/chat"
 
 def ask_ryoku(message, user_id="demo-user"):
     payload = {
@@ -90,7 +90,7 @@ ask_ryoku("Explain what a variable is in Python.")
                 </div>
                 <div id="JavaScript" class="tab-content" style="display:none">
 <pre><code class="language-javascript">
-const API_URL = "https://your-render-url.onrender.com/chat";
+const API_URL = "https://ryoku-tutor-api.onrender.com/chat";
 
 async function askRyoku(message, userId = "demo-user") {
     const payload = {
@@ -129,7 +129,7 @@ import java.net.http.HttpResponse;
 
 public class RyokuClient {
     public static void main(String[] args) throws Exception {
-        String apiUrl = "https://your-render-url.onrender.com/chat";
+        String apiUrl = "https://ryoku-tutor-api.onrender.com/chat";
         String jsonPayload = "{\"user_id\": \"demo-user\", \"new_message\": \"What is the main method in Java?\"}";
 
         HttpClient client = HttpClient.newHttpClient();
@@ -157,7 +157,7 @@ public class RyokuClient
 {
     static async Task Main(string[] args)
     {
-        var apiUrl = "https://your-render-url.onrender.com/chat";
+        var apiUrl = "https://ryoku-tutor-api.onrender.com/chat";
         var client = new HttpClient();
 
         var payload = new {
@@ -183,7 +183,7 @@ public class RyokuClient
                 <div id="PHP" class="tab-content" style="display:none">
 <pre><code class="language-php">
 &lt;?php
-$apiUrl = 'https://your-render-url.onrender.com/chat';
+$apiUrl = 'https://ryoku-tutor-api.onrender.com/chat';
 
 function askRyoku($message, $userId = 'demo-user') {
     global $apiUrl;
@@ -221,7 +221,7 @@ askRyoku("What is an associative array in PHP?");
         </main>
         <footer>
             <p>Ryoku API &copy; 2024. Built with FastAPI and <i class="fa-solid fa-heart"></i>.</p>
-            <a href="https://github.com/your-github-username/your-repo-name" target="_blank"><i class="fab fa-github"></i> View on GitHub</a>
+            <a href="https://github.com/Ryoku-ai" target="_blank"><i class="fab fa-github"></i> View on GitHub</a>
         </footer>
     </div>
 
