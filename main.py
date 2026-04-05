@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import g4f
@@ -15,12 +16,15 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# --- Templates setup ---
-templates = Jinja2Templates(directory="templates")  # folder containing index.html
+# --- Mount static files ---
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# --- Store conversation history per user ---
+# --- Templates folder ---
+templates = Jinja2Templates(directory="templates")  # HTML هنا
+
+# --- Conversation history store ---
 user_conversations = defaultdict(list)
-MAX_HISTORY = 20  # Keep last 20 messages per user
+MAX_HISTORY = 20
 
 # --- System prompts ---
 SYSTEM_PROMPT_CHAT = """
