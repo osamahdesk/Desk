@@ -4,30 +4,47 @@ from pydantic import BaseModel, Field
 import g4f
 import asyncio
 import json
-
+import re
+from collections import defaultdict
 app = FastAPI(
     title="Ryoku Goal Planner API",
     description="API to generate full adaptive goal plans in JSON (RyokuOS) and chat responses (legacy)",
-    version="1.2.0"
+    version="2.0.0"
 )
-
-# --- System prompt للمحادثة العادية ---
+# --- Store conversation history per user ---
+user_conversations = defaultdict(list)
+MAX_HISTORY = 20  # Keep last 20 messages per user
+# --- System prompt for Chat (enhanced) ---
 SYSTEM_PROMPT_CHAT = """
 [Character Definition]
 - Your Name: Ryoku (ريوكو).
 - Your Model Name: Ryoku Gen 1.
 - Your Creator: OSAMAH.
-- Your Core Identity: world-class educational tutor.
-- Behavior: patient, encouraging, breaking complex topics into simple steps.
+- Your Core Identity: World-class AI goal planner and educational tutor.
+[Your Capabilities]
+- Create detailed study plans and goal schedules
+- Give exam preparation strategies
+- Provide motivational coaching
+- Help break down complex goals into daily tasks
+- Answer educational questions on any topic
+- Give productivity and time management tips
+[Behavior Rules]
+- Be patient, encouraging, and specific in your answers
+- Break complex topics into simple, actionable steps
+- When asked about planning, recommend using the Goals tab in the app
+- Always be helpful and give real, useful advice — never generic responses
+- If the user shares their goal context, reference it in your responses
+- Keep responses concise but informative (2-4 paragraphs max)
+- Use bullet points and numbered lists for clarity
+- You can respond in Arabic or English based on the user's language
 """
-
-# --- System prompt لتوليد JSON كامل ---
+# --- System prompt for JSON plan generation ---
 SYSTEM_PROMPT_JSON = """
 You are Ryoku, a world-class educational AI tutor specialized in generating complete, adaptive goal plans.
-You will generate the output in strict JSON format ONLY, without extra text.
+You MUST generate the output in strict JSON format ONLY, without any extra text, markdown, or code blocks.
+Do NOT wrap the JSON in ```json``` or any other formatting. Output ONLY the raw JSON object.
 Input: goal name, duration, difficulty, importance, and details.
 Output JSON format:
-
 {
   "goal_name": "string",
   "duration_days": integer,
@@ -43,18 +60,22 @@ Output JSON format:
     }
   ],
   "weekly_exam": true/false,
-  "tips": ["string", "string"],
+  "tips": ["string", "string", "string"],
   "motivation": "string"
 }
-
-Make sure the JSON is valid and ready to be parsed by the application.
+Rules:
+- Generate a task list for EVERY day from day 1 to duration_days
+- Each day should have 2-5 tasks depending on difficulty
+- Task types: lesson (learning), practice (exercises), test (quizzes), challenge (boss challenges)
+- Make task titles specific to the goal, not generic
+- Tips should be actionable and specific to the goal
+- Motivation should be personal and inspiring
+- Output ONLY valid JSON, no extra text
 """
-
-# --- نماذج البيانات ---
+# --- Data models ---
 class ConversationRequest(BaseModel):
     user_id: str
     new_message: str
-
 class GoalRequest(BaseModel):
     user_id: str
     goal_name: str
@@ -62,34 +83,61 @@ class GoalRequest(BaseModel):
     difficulty: str
     importance: str
     details: str
-
 class BotResponse(BaseModel):
     answer: str
-
 class GoalPlanResponse(BaseModel):
     plan: dict
-
-# --- نقطة النهاية العادية /chat ---
+# --- Helper: Extract JSON from possibly formatted text ---
+def extract_json(text: str) -> dict:
+    """Extract JSON from text that might be wrapped in markdown code blocks."""
+    # Try direct parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Try to extract from ```json ... ``` blocks
+    patterns = [
+        r'```json\s*(.*?)\s*```',
+        r'```\s*(.*?)\s*```',
+        r'\{.*\}',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1) if '```' in pattern else match.group(0))
+            except (json.JSONDecodeError, IndexError):
+                continue
+    raise ValueError("Could not extract valid JSON from response")
+# --- /chat endpoint (with conversation history) ---
 @app.post("/chat", response_model=BotResponse)
 async def handle_chat(request: ConversationRequest):
-    history = [
-        {"role": "system", "content": SYSTEM_PROMPT_CHAT},
-        {"role": "user", "content": request.new_message}
-    ]
+    user_id = request.user_id
+    # Build messages with history
+    messages = [{"role": "system", "content": SYSTEM_PROMPT_CHAT}]
+    # Add conversation history
+    history = user_conversations[user_id]
+    messages.extend(history[-MAX_HISTORY:])  # Last N messages
+    # Add new message
+    messages.append({"role": "user", "content": request.new_message})
     try:
         response_text = await g4f.ChatCompletion.create_async(
             model=g4f.models.default,
-            messages=history,
+            messages=messages,
             timeout=30
         )
         if not response_text:
             raise Exception("AI model returned empty response.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
-
+    # Save to history
+    user_conversations[user_id].append({"role": "user", "content": request.new_message})
+    user_conversations[user_id].append({"role": "assistant", "content": str(response_text)})
+    # Trim history if too long
+    if len(user_conversations[user_id]) > MAX_HISTORY * 2:
+        user_conversations[user_id] = user_conversations[user_id][-MAX_HISTORY:]
     return {"answer": str(response_text)}
-
-# --- نقطة النهاية الجديدة /RyokuOS ---
+# --- /RyokuOS endpoint (JSON plan generation) ---
 @app.post("/RyokuOS", response_model=GoalPlanResponse)
 async def generate_goal_plan(request: GoalRequest):
     messages = [
@@ -100,7 +148,7 @@ Duration: {request.duration_days} days
 Difficulty: {request.difficulty}
 Importance: {request.importance}
 Details: {request.details}
-Generate full adaptive plan JSON.
+Generate the complete adaptive plan as raw JSON only. No markdown, no extra text.
 """}
     ]
     try:
@@ -111,15 +159,26 @@ Generate full adaptive plan JSON.
         )
         if not response_text:
             raise Exception("AI model returned empty response.")
-        plan_json = json.loads(response_text)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="AI response is not valid JSON")
+        plan_json = extract_json(str(response_text))
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=f"Could not parse AI response as JSON: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
-
     return {"plan": plan_json}
-
+# --- Clear chat history ---
+@app.delete("/chat/{user_id}")
+async def clear_chat(user_id: str):
+    if user_id in user_conversations:
+        del user_conversations[user_id]
+    return {"message": f"Chat history cleared for {user_id}"}
 # --- Root ---
 @app.get("/")
 def root():
-    return {"message": "Ryoku Goal Planner API. /chat for legacy chat, /RyokuOS for full JSON plan."}
+    return {
+        "message": "Ryoku Goal Planner API v2.0",
+        "endpoints": {
+            "/chat": "POST - Chat with Ryoku (with conversation history)",
+            "/RyokuOS": "POST - Generate full goal plan as JSON",
+            "/chat/{user_id}": "DELETE - Clear chat history"
+        }
+    }
