@@ -138,6 +138,11 @@ async def handle_chat(request: ConversationRequest):
         user_conversations[user_id] = user_conversations[user_id][-MAX_HISTORY:]
     return {"answer": str(response_text)}
 # --- /RyokuOS endpoint (JSON plan generation) ---
+
+@app.get("/doc", response_class=HTMLResponse)
+async def read_documentation(request: Request):
+return templates.TemplateResponse("index.html", {"request": request})
+
 @app.post("/RyokuOS", response_model=GoalPlanResponse)
 async def generate_goal_plan(request: GoalRequest):
     messages = [
