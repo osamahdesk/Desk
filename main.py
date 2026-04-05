@@ -19,7 +19,7 @@ app = FastAPI(
 
 # --- 2. Mount static and templates ---
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")  # مجلد templates الآن
+templates = Jinja2Templates(directory="templates")  # ✅ هذا هو التغيير الوحيد
 
 # --- 3. Store conversation history per user ---
 user_conversations = defaultdict(list)
