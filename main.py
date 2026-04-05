@@ -3,30 +3,29 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import g4f
 import asyncio
 import json
 import re
 from collections import defaultdict
 
+# --- 1. إعداد التطبيق ---
 app = FastAPI(
     title="Ryoku Goal Planner API",
     description="API to generate full adaptive goal plans in JSON (RyokuOS) and chat responses (legacy)",
     version="2.0.0"
 )
 
-# --- Mount static files ---
+# --- 2. Mount static and templates (HTML داخل static كما القديم) ---
 app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="static")  # مثل القديم
 
-# --- Templates folder ---
-templates = Jinja2Templates(directory="templates")  # HTML هنا
-
-# --- Conversation history store ---
+# --- 3. Store conversation history per user ---
 user_conversations = defaultdict(list)
 MAX_HISTORY = 20
 
-# --- System prompts ---
+# --- 4. System prompts ---
 SYSTEM_PROMPT_CHAT = """
 [Character Definition]
 - Your Name: Ryoku (ريوكو).
@@ -85,7 +84,7 @@ Rules:
 - Output ONLY valid JSON, no extra text
 """
 
-# --- Data models ---
+# --- 5. Data models ---
 class ConversationRequest(BaseModel):
     user_id: str
     new_message: str
@@ -104,7 +103,7 @@ class BotResponse(BaseModel):
 class GoalPlanResponse(BaseModel):
     plan: dict
 
-# --- Helper function ---
+# --- 6. Helper: Extract JSON from text ---
 def extract_json(text: str) -> dict:
     try:
         return json.loads(text)
@@ -124,7 +123,7 @@ def extract_json(text: str) -> dict:
                 continue
     raise ValueError("Could not extract valid JSON from response")
 
-# --- Chat endpoint ---
+# --- 7. Chat endpoint ---
 @app.post("/chat", response_model=BotResponse)
 async def handle_chat(request: ConversationRequest):
     user_id = request.user_id
@@ -142,13 +141,14 @@ async def handle_chat(request: ConversationRequest):
             raise Exception("AI model returned empty response.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
+    # Save history
     user_conversations[user_id].append({"role": "user", "content": request.new_message})
     user_conversations[user_id].append({"role": "assistant", "content": str(response_text)})
     if len(user_conversations[user_id]) > MAX_HISTORY * 2:
         user_conversations[user_id] = user_conversations[user_id][-MAX_HISTORY:]
     return {"answer": str(response_text)}
 
-# --- JSON plan endpoint ---
+# --- 8. JSON goal plan endpoint ---
 @app.post("/RyokuOS", response_model=GoalPlanResponse)
 async def generate_goal_plan(request: GoalRequest):
     messages = [
@@ -177,19 +177,19 @@ Generate the complete adaptive plan as raw JSON only. No markdown, no extra text
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
     return {"plan": plan_json}
 
-# --- Documentation endpoint ---
+# --- 9. Documentation endpoint (/doc) ---
 @app.get("/doc", response_class=HTMLResponse)
 async def read_documentation(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# --- Clear chat history ---
+# --- 10. Clear chat history ---
 @app.delete("/chat/{user_id}")
 async def clear_chat(user_id: str):
     if user_id in user_conversations:
         del user_conversations[user_id]
     return {"message": f"Chat history cleared for {user_id}"}
 
-# --- Root ---
+# --- 11. Root endpoint ---
 @app.get("/")
 def root():
     return {
