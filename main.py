@@ -17,71 +17,27 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# --- 2. Mount static and templates (HTML داخل static كما القديم) ---
+# --- 2. Mount static and templates ---
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="static")  # مثل القديم
+templates = Jinja2Templates(directory="templates")  # مجلد templates الآن
 
 # --- 3. Store conversation history per user ---
 user_conversations = defaultdict(list)
 MAX_HISTORY = 20
 
 # --- 4. System prompts ---
-SYSTEM_PROMPT_CHAT = """
-[Character Definition]
+SYSTEM_PROMPT_CHAT = """[Character Definition]
 - Your Name: Ryoku (ريوكو).
 - Your Model Name: Ryoku Gen 1.
 - Your Creator: OSAMAH.
 - Your Core Identity: World-class AI goal planner and educational tutor.
-[Your Capabilities]
-- Create detailed study plans and goal schedules
-- Give exam preparation strategies
-- Provide motivational coaching
-- Help break down complex goals into daily tasks
-- Answer educational questions on any topic
-- Give productivity and time management tips
 [Behavior Rules]
 - Be patient, encouraging, and specific in your answers
 - Break complex topics into simple, actionable steps
-- When asked about planning, recommend using the Goals tab in the app
-- Always be helpful and give real, useful advice — never generic responses
-- If the user shares their goal context, reference it in your responses
-- Keep responses concise but informative (2-4 paragraphs max)
-- Use bullet points and numbered lists for clarity
-- You can respond in Arabic or English based on the user's language
 """
 
-SYSTEM_PROMPT_JSON = """
-You are Ryoku, a world-class educational AI tutor specialized in generating complete, adaptive goal plans.
+SYSTEM_PROMPT_JSON = """You are Ryoku, a world-class educational AI tutor specialized in generating complete, adaptive goal plans.
 You MUST generate the output in strict JSON format ONLY, without any extra text, markdown, or code blocks.
-Do NOT wrap the JSON in ```json``` or any other formatting. Output ONLY the raw JSON object.
-Input: goal name, duration, difficulty, importance, and details.
-Output JSON format:
-{
-  "goal_name": "string",
-  "duration_days": integer,
-  "difficulty": "string",
-  "importance": "string",
-  "details": "string",
-  "daily_plan": [
-    {
-      "day": integer,
-      "tasks": [
-        {"type": "lesson/practice/test/challenge", "title": "string", "time": integer_minutes}
-      ]
-    }
-  ],
-  "weekly_exam": true/false,
-  "tips": ["string", "string", "string"],
-  "motivation": "string"
-}
-Rules:
-- Generate a task list for EVERY day from day 1 to duration_days
-- Each day should have 2-5 tasks depending on difficulty
-- Task types: lesson (learning), practice (exercises), test (quizzes), challenge (boss challenges)
-- Make task titles specific to the goal, not generic
-- Tips should be actionable and specific to the goal
-- Motivation should be personal and inspiring
-- Output ONLY valid JSON, no extra text
 """
 
 # --- 5. Data models ---
@@ -103,17 +59,13 @@ class BotResponse(BaseModel):
 class GoalPlanResponse(BaseModel):
     plan: dict
 
-# --- 6. Helper: Extract JSON from text ---
+# --- 6. Helper: Extract JSON ---
 def extract_json(text: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
-    patterns = [
-        r'```json\s*(.*?)\s*```',
-        r'```\s*(.*?)\s*```',
-        r'\{.*\}',
-    ]
+    patterns = [r'```json\s*(.*?)\s*```', r'```\s*(.*?)\s*```', r'\{.*\}']
     for pattern in patterns:
         match = re.search(pattern, text, re.DOTALL)
         if match:
@@ -141,7 +93,7 @@ async def handle_chat(request: ConversationRequest):
             raise Exception("AI model returned empty response.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
-    # Save history
+
     user_conversations[user_id].append({"role": "user", "content": request.new_message})
     user_conversations[user_id].append({"role": "assistant", "content": str(response_text)})
     if len(user_conversations[user_id]) > MAX_HISTORY * 2:
@@ -159,7 +111,7 @@ Duration: {request.duration_days} days
 Difficulty: {request.difficulty}
 Importance: {request.importance}
 Details: {request.details}
-Generate the complete adaptive plan as raw JSON only. No markdown, no extra text.
+Generate the complete adaptive plan as raw JSON only.
 """}
     ]
     try:
@@ -168,11 +120,7 @@ Generate the complete adaptive plan as raw JSON only. No markdown, no extra text
             messages=messages,
             timeout=60
         )
-        if not response_text:
-            raise Exception("AI model returned empty response.")
         plan_json = extract_json(str(response_text))
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=f"Could not parse AI response as JSON: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
     return {"plan": plan_json}
@@ -195,8 +143,8 @@ def root():
     return {
         "message": "Ryoku Goal Planner API v2.0",
         "endpoints": {
-            "/chat": "POST - Chat with Ryoku (with conversation history)",
-            "/RyokuOS": "POST - Generate full goal plan as JSON",
+            "/chat": "POST - Chat with Ryoku",
+            "/RyokuOS": "POST - Generate goal plan as JSON",
             "/chat/{user_id}": "DELETE - Clear chat history",
             "/doc": "GET - HTML documentation page"
         }
