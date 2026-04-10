@@ -114,6 +114,7 @@ Output format:
           "type": "lesson/practice/test/challenge",
           "title": "string",
           "time": integer_minutes,
+          "explanation": "string (Deep, organized explanation of the task with examples. MANDATORY)",
           "homeworkType": "string (e.g. Reading, Coding, Writing)",
           "notes": "string (Teacher's advice or specific hints)",
           "exercises": ["string", "string"]
@@ -123,14 +124,16 @@ Output format:
   ],
   "weekly_exam": true/false,
   "tips": ["string", "string", "string"],
-  "motivation": "string"
+  "motivation": "string",
+  "smart_notifications": ["string", "string", "string"]
 }
 
 Rules:
 - Generate EVERY day from 1 to duration_days
 - 2-5 tasks per day based on difficulty
 - Task titles must be specific to the goal — never generic
-- CRITICAL: Provide labels, notes, and exercises in the PREFERRED LANGUAGE of the user's prompt (Arabic if requested in Arabic, English otherwise).
+- smart_notifications MUST be 5-10 tailored conversational push-notification sentences (e.g. "Don't forget to practice X today!", "You are doing great on Y!")
+- CRITICAL: Provide labels, notes, exercises, and notifications in the PREFERRED LANGUAGE of the user's prompt (Arabic if requested in Arabic, English otherwise).
 - Output ONLY valid JSON
 """
 
@@ -280,6 +283,7 @@ Based on the user's comment, modify this task and return ONLY a raw JSON object 
   "type": "lesson/practice/test/challenge",
   "title": "new task title",
   "time": integer_minutes,
+  "explanation": "string",
   "homeworkType": "string",
   "notes": "string",
   "exercises": ["string"]
