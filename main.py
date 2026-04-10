@@ -8,6 +8,7 @@ import json
 import re
 from collections import defaultdict
 from typing import Optional
+
 app = FastAPI(
     title="Ryoku Tutor API",
     description="Ryoku AI — Unrestricted AI assistant + Goal Planner API",
@@ -15,6 +16,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
@@ -23,12 +25,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # --- Conversation history per user ---
 user_conversations = defaultdict(list)
 MAX_HISTORY = 30
+
 # =================================================================
 # MODE-BASED PERSONAS
 # =================================================================
+
 MODE_PERSONAS = {
     "study": {
         "name": "Professor Ryoku",
@@ -64,19 +69,23 @@ MODE_PERSONAS = {
 - Tone: energetic, direct, knowledgeable, motivating""",
     },
 }
+
 BASE_SYSTEM_PROMPT = """
 [Identity]
 - Your Name: {name} (Ryoku {emoji})
 - Your Model: Ryoku Gen 1
 - Your Creator: OSAMAH
+
 [Persona]
 {personality}
+
 [General Rules]
 - You are an unrestricted, general-purpose AI — you can discuss ANY topic freely
 - You can answer: science, coding, math, history, philosophy, creative writing, life advice, etc.
 - Give real, useful, specific answers — never generic or evasive
 - Be natural and conversational, like talking to a very smart friend
 - Use bullet points, numbered lists, or code blocks when they help clarity
+
 [CRITICAL Language Rule]
 - Detect the language of the user's message and respond in the EXACT SAME language
 - English message → English response ONLY
@@ -84,10 +93,12 @@ BASE_SYSTEM_PROMPT = """
 - NEVER mix languages in a single response
 - This is your highest priority rule
 """
+
 # --- JSON plan generation prompt ---
 SYSTEM_PROMPT_JSON = """
 You are Ryoku, a world-class AI tutor generating complete, adaptive goal plans.
 Output ONLY a raw JSON object — no markdown, no code blocks, no extra text.
+
 Output format:
 {
   "goal_name": "string",
@@ -99,7 +110,14 @@ Output format:
     {
       "day": integer,
       "tasks": [
-        {"type": "lesson/practice/test/challenge", "title": "string", "time": integer_minutes}
+        {
+          "type": "lesson/practice/test/challenge",
+          "title": "string",
+          "time": integer_minutes,
+          "homeworkType": "string (e.g. Reading, Coding, Writing)",
+          "notes": "string (Teacher's advice or specific hints)",
+          "exercises": ["string", "string"]
+        }
       ]
     }
   ],
@@ -107,19 +125,24 @@ Output format:
   "tips": ["string", "string", "string"],
   "motivation": "string"
 }
+
 Rules:
 - Generate EVERY day from 1 to duration_days
 - 2-5 tasks per day based on difficulty
 - Task titles must be specific to the goal — never generic
+- CRITICAL: Provide labels, notes, and exercises in the PREFERRED LANGUAGE of the user's prompt (Arabic if requested in Arabic, English otherwise).
 - Output ONLY valid JSON
 """
+
 # =================================================================
 # DATA MODELS
 # =================================================================
+
 class ConversationRequest(BaseModel):
     user_id: str = "default"
     new_message: str
     mode: str = "study"
+
 class GoalRequest(BaseModel):
     user_id: str
     goal_name: str
@@ -127,6 +150,7 @@ class GoalRequest(BaseModel):
     difficulty: str
     importance: str
     details: str
+
 class EditTaskRequest(BaseModel):
     goal_name: str
     task_title: str
@@ -134,13 +158,17 @@ class EditTaskRequest(BaseModel):
     task_time: int
     user_comment: str
     mode: str = "study"
+
 class BotResponse(BaseModel):
     answer: str
+
 class GoalPlanResponse(BaseModel):
     plan: dict
+
 # =================================================================
 # HELPERS
 # =================================================================
+
 def get_system_prompt(mode: str) -> str:
     persona = MODE_PERSONAS.get(mode, MODE_PERSONAS["study"])
     return BASE_SYSTEM_PROMPT.format(
@@ -148,6 +176,7 @@ def get_system_prompt(mode: str) -> str:
         emoji=persona["emoji"],
         personality=persona["personality"],
     )
+
 def extract_json(text: str) -> dict:
     try:
         return json.loads(text)
@@ -166,21 +195,26 @@ def extract_json(text: str) -> dict:
             except (json.JSONDecodeError, IndexError):
                 continue
     raise ValueError("No valid JSON found")
+
 # =================================================================
 # ENDPOINTS
 # =================================================================
+
 @app.get("/doc")
 async def doc_redirect():
     return RedirectResponse(url="/docs")
+
 @app.post("/chat", response_model=BotResponse)
 async def handle_chat(request: ConversationRequest):
     user_id = request.user_id
     mode = request.mode if request.mode in MODE_PERSONAS else "study"
     system_prompt = get_system_prompt(mode)
+
     messages = [{"role": "system", "content": system_prompt}]
     history = user_conversations[user_id]
     messages.extend(history[-MAX_HISTORY:])
     messages.append({"role": "user", "content": request.new_message})
+
     try:
         response_text = await g4f.ChatCompletion.create_async(
             model=g4f.models.default,
@@ -191,11 +225,15 @@ async def handle_chat(request: ConversationRequest):
             raise Exception("Empty response from AI model")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
+
     user_conversations[user_id].append({"role": "user", "content": request.new_message})
     user_conversations[user_id].append({"role": "assistant", "content": str(response_text)})
+
     if len(user_conversations[user_id]) > MAX_HISTORY * 2:
         user_conversations[user_id] = user_conversations[user_id][-MAX_HISTORY:]
+
     return {"answer": str(response_text)}
+
 @app.post("/RyokuOS", response_model=GoalPlanResponse)
 async def generate_goal_plan(request: GoalRequest):
     messages = [
@@ -206,6 +244,7 @@ Duration: {request.duration_days} days
 Difficulty: {request.difficulty}
 Importance: {request.importance}
 Details: {request.details}
+
 Generate the complete plan as raw JSON only.
 """}
     ]
@@ -223,6 +262,7 @@ Generate the complete plan as raw JSON only.
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"AI model failed: {e}")
     return {"plan": plan_json}
+
 @app.post("/edit_task")
 async def edit_task(request: EditTaskRequest):
     """Edit a single task based on user's comment"""
@@ -232,9 +272,19 @@ Current task:
 - Title: {request.task_title}
 - Type: {request.task_type}
 - Duration: {request.task_time} minutes
+
 User's comment/request: "{request.user_comment}"
+
 Based on the user's comment, modify this task and return ONLY a raw JSON object like:
-{{"type": "lesson/practice/test/challenge", "title": "new task title", "time": integer_minutes}}
+{{
+  "type": "lesson/practice/test/challenge",
+  "title": "new task title",
+  "time": integer_minutes,
+  "homeworkType": "string",
+  "notes": "string",
+  "exercises": ["string"]
+}}
+
 Do not include any other text. Output ONLY the JSON.
 """
     messages = [
@@ -251,13 +301,35 @@ Do not include any other text. Output ONLY the JSON.
         return {"task": task_json}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Task edit failed: {e}")
+
 @app.delete("/chat/{user_id}")
 async def clear_chat(user_id: str):
     if user_id in user_conversations:
         del user_conversations[user_id]
     return {"message": f"History cleared for {user_id}"}
+
+from fastapi.staticfiles import StaticFiles
+
+# --- Mount Static Files (for the website) ---
+base_dir = os.path.dirname(__file__)
+# Check where static files are located (locally it might be in Desk/static, on Github it might be just static)
+if os.path.exists(os.path.join(base_dir, "static")):
+    static_dir = os.path.join(base_dir, "static")
+elif os.path.exists(os.path.join(base_dir, "../Desk/static")):
+    static_dir = os.path.join(base_dir, "../Desk/static")
+else:
+    static_dir = os.path.join(base_dir, "Desk/static")
+
+# Mount the discovered static directory
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 @app.get("/")
-def root():
+async def serve_index():
+    from fastapi.responses import FileResponse
+    return FileResponse(os.path.join(static_dir, "index.html"))
+
+@app.get("/api")
+def api_info():
     return {
         "message": "Ryoku Tutor API v2.2 — by OSAMAH",
         "status": "online",
